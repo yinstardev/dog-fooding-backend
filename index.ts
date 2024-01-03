@@ -14,37 +14,37 @@ const app = express();
 const httpServer = http.createServer(app);
 const fe_url = process.env.FE_URL || "";
 
-app.use((req, res, next) => {
-    logging.info(`METHOD: [${req.method}] - URL: [${req.url}] - IP: [${req.socket.remoteAddress}]`);
+// app.use((req, res, next) => {
+//     logging.info(`METHOD: [${req.method}] - URL: [${req.url}] - IP: [${req.socket.remoteAddress}]`);
 
-    res.on('finish', () => {
-        logging.info(`METHOD: [${req.method}] - URL: [${req.url}] - STATUS: [${res.statusCode}] - IP: [${req.socket.remoteAddress}]`);
-    });
+//     res.on('finish', () => {
+//         logging.info(`METHOD: [${req.method}] - URL: [${req.url}] - STATUS: [${res.statusCode}] - IP: [${req.socket.remoteAddress}]`);
+//     });
 
-    next();
-});
+//     next();
+// });
 
-app.use(passport.initialize());
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json());
+// app.use(passport.initialize());
+// app.use(express.urlencoded({ extended: false }));
+// app.use(express.json());
 
-app.use((req, res, next) => {
-    const allowedOrigins = [`${fe_url}`];
-    const origin = req.headers.origin || 'http://localhost:3000';
+// app.use((req, res, next) => {
+//     const allowedOrigins = [`${fe_url}`];
+//     const origin = req.headers.origin || 'http://localhost:3000';
     
-    if (allowedOrigins.includes(origin)) {
-        res.header('Access-Control-Allow-Origin', origin);
-    }
+//     if (allowedOrigins.includes(origin)) {
+//         res.header('Access-Control-Allow-Origin', origin);
+//     }
 
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    if (req.method == 'OPTIONS') {
-        res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, GET');
-        return res.status(200).json({});
-    }
+//     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+//     res.header('Access-Control-Allow-Credentials', 'true');
+//     if (req.method == 'OPTIONS') {
+//         res.header('Access-Control-Allow-Methods', 'PUT, POST, PATCH, DELETE, GET');
+//         return res.status(200).json({});
+//     }
 
-    next();
-});
+//     next();
+// });
 
 app.get('/',(req,res) => {
     res.status(200).json({
