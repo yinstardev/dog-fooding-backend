@@ -61,7 +61,7 @@ app.get('/login', passport.authenticate('saml', config.saml.options), (req, res)
     return res.redirect(`${fe_url}/dashboard`);
 });
 
-const loginUrl = process.env.LOGIN_URI || '';
+const loginUrl = 'https://champagne.thoughtspotstaging.cloud/callosum/v1/session/login';
 const USERNAME = process.env.USERNAME || '';
 const PASSWORD = process.env.PASSWORD || '';
 
