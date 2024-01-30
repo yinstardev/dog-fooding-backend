@@ -107,7 +107,8 @@ app.post('/getTokenForObject', async (req, res) => {
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'Accept': 'application/json'
-                }
+                },
+                timeout: 30000
             });
         }
         const loginResponse = await tokenApiRequest;
@@ -121,7 +122,8 @@ app.post('/getTokenForObject', async (req, res) => {
             headers: {
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${admin_user_token}`,
-            }
+            },
+            timeout: 30000
         });
 
         res.json(response.data);
