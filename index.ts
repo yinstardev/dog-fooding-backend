@@ -111,9 +111,9 @@ app.post('/getTokenForObject', async (req, res) => {
             });
         }
         const loginResponse = await tokenApiRequest;
-        // console.log("0-000--------------------------------------------------------------------000-0")
+        console.log("0-000--------------------------------------------------------------------000-0")
         const admin_user_token = loginResponse?.data.accessToken;
-        // console.log(loginResponse?.data.accessToken, "this is loginResponse")
+        console.log(loginResponse?.data.accessToken, "this is loginResponse")
         const response = await axios.get('https://champagne.thoughtspotstaging.cloud/callosum/v1/metadata/pinboard/1d8000d8-6225-4202-b56c-786fd73f95ad', {
             params: {
                 inboundrequesttype: 10000
