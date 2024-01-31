@@ -99,26 +99,32 @@ app.post('/getTokenForObject', async (req, res) => {
   });
 
 
-  app.get('/getTabs', async (req, res) => {
-    try {
+let taskStatus = { status: 'idle', data: null, error: null };
 
-        if(!tokenApiRequest) {
-            tokenApiRequest = await axios.post(loginUrl, `username=${USERNAME}&password=${PASSWORD}&rememberme=false`, {
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                    'Accept': 'application/json'
-                },
-                timeout: 30000
-            });
-        }
-        const loginResponse = await tokenApiRequest;
-        console.log("0-000--------------------------------------------------------------------000-0")
-        const admin_user_token = loginResponse?.data.accessToken;
-        console.log(loginResponse?.data.accessToken, "this is loginResponse")
-        const response = await axios.get('https://champagne.thoughtspotstaging.cloud/callosum/v1/metadata/pinboard/1d8000d8-6225-4202-b56c-786fd73f95ad', {
-            params: {
-                inboundrequesttype: 10000
+app.get('/getTabs', async (req, res) => {
+    if (taskStatus.status === 'processing') {
+        return res.status(202).json({ status: 'in progress' });
+    }
+
+    taskStatus = { status: 'processing', data: null, error: null };
+    processInBackground(); // Start the background process
+
+    res.status(202).json({ status: 'started' });
+});
+
+async function processInBackground() {
+    try {
+        const loginResponse = await axios.post(loginUrl, `username=${USERNAME}&password=${PASSWORD}&rememberme=false`, {
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
             },
+            timeout: 30000
+        });
+        const admin_user_token = loginResponse?.data.accessToken;
+
+        const response = await axios.get('https://champagne.thoughtspotstaging.cloud/callosum/v1/metadata/pinboard/1d8000d8-6225-4202-b56c-786fd73f95ad', {
+            params: { inboundrequesttype: 10000 },
             headers: {
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${admin_user_token}`,
@@ -126,11 +132,20 @@ app.post('/getTokenForObject', async (req, res) => {
             timeout: 30000
         });
 
-        res.json(response.data);
-    } catch (error) {
-        console.error(error);
-        res.status(500).send('Error occurred while fetching data');
+        const transformedTabs = response.data.tabs.tab.map((tab: any) => ({
+            id: tab.header.guid,
+            name: tab.header.display_name
+        }));
+
+        taskStatus = { status: 'completed', data: transformedTabs, error: null };
+    } catch (error: any) {
+        console.error('Error in background process:', error);
+        taskStatus = { status: 'failed', data: null, error: error.message };
     }
+}
+
+app.get('/getStatus', (req, res) => {
+    res.json(taskStatus);
 });
 
 app.post('/login/callback', 
