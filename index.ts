@@ -132,29 +132,27 @@ app.get('/healthcheck', (req, res, next) => {
     return res.status(200).json({ messgae: 'Server is runngggging!' });
 });
 
-app.post('/addTabsAndFilters', async (req: any, res) => {
+app.post('/addTabsAndFilters', async (req, res) => {
     try {
-      const { tabs, filters, email } = req.body;
+        const { tabs, filters, email } = req.body;
 
-      console.log('Received tabs:', JSON.stringify(tabs));
-      console.log('Received filters:', JSON.stringify(filters));
-  
-  
-      await query(
-        'INSERT INTO users (email, tabs, filters) VALUES ($1, $2, $3) ON CONFLICT (email) DO UPDATE SET tabs = $2, filters = $3',
-        [email, JSON.stringify(tabs), JSON.stringify(filters)]
-      );
-  
-      res.status(200).json({ message: 'Tab and filter information updated successfully' });
+        await query(
+            `INSERT INTO users (email, tabs, filters) VALUES ($1, $2, $3)
+             ON CONFLICT (email) DO UPDATE SET tabs = EXCLUDED.tabs, filters = EXCLUDED.filters`,
+            [email, JSON.stringify(tabs), JSON.stringify(filters)]
+        );
+
+        res.status(200).json({ message: 'Tab and filter information updated successfully' });
     } catch (error) {
-      console.error('Error adding/updating tab and filter information:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Error adding/updating tab and filter information:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-  });
+});
+
 
   app.post('/addTabsAndFiltersTest', async (req, res) => {
     try {
-        const { tabs, filters, email } = req.body; // Assuming email is sent in the request body
+        const { tabs, filters, email } = req.body;
 
         const tabsJson = JSON.stringify(tabs);
         const filtersJson = JSON.stringify(filters);
@@ -173,22 +171,42 @@ app.post('/addTabsAndFilters', async (req: any, res) => {
 });
 
   
-
-app.get('/getTabsAndFilters', async (req: any, res) => {
-    try {
-      const { email } = req.query;
+interface Filter {
+    accountNames: string[];
+    caseNumbers: string[];
+  }
   
-      const result = await query('SELECT * FROM users WHERE email = $1', [email]);
-      if (result.rows.length > 0) {
-        res.status(200).json(result.rows[0]);
-      } else {
-        res.status(404).json({ error: 'Tab and filter information not found for this user' });
-      }
+  interface Tab {
+    id: string;
+    name: string;
+  }
+
+const defaultFilters: Filter = { accountNames: [], caseNumbers: [] };
+const defaultTabs: Tab[] = [];
+app.get('/getTabsAndFilters', async (req, res) => {
+    const { email } = req.query;
+
+    try {
+        let result = await query('SELECT * FROM users WHERE email = $1', [email]);
+
+        if (result.rows.length === 0) {
+            await query(
+                'INSERT INTO users (email, filters, tabs) VALUES ($1, $2, $3)',
+                [email, JSON.stringify(defaultFilters), JSON.stringify(defaultTabs)]
+            );
+            res.json({ email, filters: defaultFilters, tabs: defaultTabs });
+        } else {
+            const user = result.rows[0];
+            const filters = user.filters || defaultFilters;
+            const tabs = user.tabs || defaultTabs;
+            res.json({ email: user.email, filters, tabs });
+        }
     } catch (error) {
-      console.error('Error fetching tab and filter information:', error);
-      res.status(500).json({ error: 'Internal Server Error' });
+        console.error('Error handling tabs and filters:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
     }
-  });
+});
+
 
 app.post('/getauthtoken', async (req, res) => {
     const { username } = req.body;
