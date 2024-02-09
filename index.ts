@@ -49,6 +49,17 @@ app.use((req, res, next) => {
     next();
 });
 
+const keepDbConnectionAlive = async () => {
+    try {
+        await query('SELECT 1'); // Example of a lightweight query
+        logging.info('Heartbeat query executed successfully to keep DB connection alive');
+    } catch (error: any) {
+        logging.error('Error executing heartbeat query:', error);
+    }
+};
+
+setInterval(keepDbConnectionAlive, 4 * 60 * 1000);
+
 app.get('/',(req,res) => {
     res.status(200).json({
         "Status":"Server Running",
@@ -67,85 +78,34 @@ const PASSWORD = process.env.PASSWORD || '';
 
 
 let tokenApiRequest: AxiosResponse<any, any> | null= null;
-
-
-app.post('/getTokenForObject', async (req, res) => {
-    const { username } = req.body;
-  
-    if (!username) {
-      return res.status(400).json({ error: 'Username is required' });
-    }
-  
+  app.get('/getTabs', async (req, res) => {
     try {
-      const response = await axios.post('https://champagne.thoughtspotstaging.cloud/api/rest/2.0/auth/token/object', {
-        username: username,
-        object_id: "1d8000d8-6225-4202-b56c-786fd73f95ad",
-        validity_time_in_sec: 300,
-        org_id: 0,
-        auto_create: false,
-        secret_key: "d7bbea58-9f58-4b7e-84ad-5540d122f186"
-      }, {
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
+
+        if(!tokenApiRequest) {
+            tokenApiRequest = await axios.post(loginUrl, `username=${USERNAME}&password=${PASSWORD}&rememberme=false`, {
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                }
+            });
         }
-      });
-  
-      res.json({ token: response.data });
-    } catch (error) {
-      console.error('Error fetching token:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  });
-
-
-let taskStatus = { status: 'idle', data: null, error: null };
-
-app.get('/getTabs', async (req, res) => {
-    if (taskStatus.status === 'processing') {
-        return res.status(202).json({ status: 'in progress' });
-    }
-
-    taskStatus = { status: 'processing', data: null, error: null };
-    processInBackground(); // Start the background process
-
-    res.status(202).json({ status: 'started' });
-});
-
-async function processInBackground() {
-    try {
-        const loginResponse = await axios.post(loginUrl, `username=${USERNAME}&password=${PASSWORD}&rememberme=false`, {
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                'Accept': 'application/json'
-            },
-            timeout: 30000
-        });
+        const loginResponse = await tokenApiRequest;
         const admin_user_token = loginResponse?.data.accessToken;
-
         const response = await axios.get('https://champagne.thoughtspotstaging.cloud/callosum/v1/metadata/pinboard/1d8000d8-6225-4202-b56c-786fd73f95ad', {
-            params: { inboundrequesttype: 10000 },
+            params: {
+                inboundrequesttype: 10000
+            },
             headers: {
                 'Accept': 'application/json',
                 'Authorization': `Bearer ${admin_user_token}`,
-            },
-            timeout: 30000
+            }
         });
 
-        const transformedTabs = response.data.tabs.tab.map((tab: any) => ({
-            id: tab.header.guid,
-            name: tab.header.display_name
-        }));
-
-        taskStatus = { status: 'completed', data: transformedTabs, error: null };
-    } catch (error: any) {
-        console.error('Error in background process:', error);
-        taskStatus = { status: 'failed', data: null, error: error.message };
+        res.json(response.data);
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error occurred while fetching data');
     }
-}
-
-app.get('/getStatus', (req, res) => {
-    res.json(taskStatus);
 });
 
 app.post('/login/callback', 
