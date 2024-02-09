@@ -78,9 +78,6 @@ const PASSWORD = process.env.PASSWORD || '';
 
 
 let tokenApiRequest: AxiosResponse<any, any> | null= null;
-
-
-
   app.get('/getTabs', async (req, res) => {
     try {
 
